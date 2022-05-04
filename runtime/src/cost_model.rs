@@ -87,11 +87,9 @@ impl CostModel {
 
         tx_cost.signature_cost = self.get_signature_cost(transaction);
         self.get_write_lock_cost(&mut tx_cost, transaction);
-        (
-            tx_cost.execution_cost,
-            tx_cost.data_bytes_cost,
-            tx_cost.account_data_size,
-        ) = self.get_transaction_and_data_costs(transaction);
+        (tx_cost.execution_cost, tx_cost.data_bytes_cost) =
+            self.get_transaction_and_data_costs(transaction);
+        tx_cost.account_data_size = calculate_account_data_size(transaction);
 
         debug!("transaction {:?} has cost {:?}", transaction, tx_cost);
         tx_cost
@@ -140,13 +138,9 @@ impl CostModel {
             });
     }
 
-    fn get_transaction_and_data_costs(
-        &self,
-        transaction: &SanitizedTransaction,
-    ) -> (u64, u64, u64) {
+    fn get_transaction_and_data_costs(&self, transaction: &SanitizedTransaction) -> (u64, u64) {
         let mut instruction_cost_total: u64 = 0;
         let mut data_bytes_cost_total: u64 = 0;
-        let mut data_size_cost_total: u64 = 0;
 
         for (program_id, instruction) in transaction.message().program_instructions_iter() {
             let instruction_cost = self.find_instruction_cost(program_id);
@@ -158,15 +152,8 @@ impl CostModel {
             instruction_cost_total = instruction_cost_total.saturating_add(instruction_cost);
             data_bytes_cost_total = data_bytes_cost_total
                 .saturating_add(instruction.data.len() as u64 / DATA_BYTES_UNITS);
-            data_size_cost_total = data_size_cost_total.saturating_add(
-                Self::calculate_account_data_size_on_instruction(program_id, instruction),
-            );
         }
-        (
-            instruction_cost_total,
-            data_bytes_cost_total,
-            data_size_cost_total,
-        )
+        (instruction_cost_total, data_bytes_cost_total)
     }
 
     fn calculate_account_data_size_on_deserialized_system_instruction(
@@ -348,9 +335,7 @@ mod tests {
         testee.upsert_instruction_cost(&system_program::id(), expected_cost);
         assert_eq!(
             expected_cost,
-            testee
-                .get_transaction_and_data_costs(&simple_transaction)
-                .0
+            testee.get_transaction_and_data_costs(&simple_transaction).0
         );
     }
 
@@ -376,10 +361,7 @@ mod tests {
 
         let mut testee = CostModel::default();
         testee.upsert_instruction_cost(&system_program::id(), program_cost);
-        assert_eq!(
-            expected_cost,
-            testee.get_transaction_and_data_costs(&tx).0
-        );
+        assert_eq!(expected_cost, testee.get_transaction_and_data_costs(&tx).0);
     }
 
     #[test]
