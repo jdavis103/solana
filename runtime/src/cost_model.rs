@@ -89,7 +89,7 @@ impl CostModel {
         self.get_write_lock_cost(&mut tx_cost, transaction);
         (tx_cost.execution_cost, tx_cost.data_bytes_cost) =
             self.get_transaction_and_data_costs(transaction);
-        tx_cost.account_data_size = calculate_account_data_size(transaction);
+        tx_cost.account_data_size = self.calculate_account_data_size(transaction);
 
         debug!("transaction {:?} has cost {:?}", transaction, tx_cost);
         tx_cost
