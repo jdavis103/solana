@@ -140,7 +140,7 @@ impl CostModel {
             });
     }
 
-    fn get_transaction_and_data_bytes_cost(
+    fn get_transaction_and_data_costs(
         &self,
         transaction: &SanitizedTransaction,
     ) -> (u64, u64, u64) {
@@ -349,7 +349,7 @@ mod tests {
         assert_eq!(
             expected_cost,
             testee
-                .get_transaction_and_data_bytes_cost(&simple_transaction)
+                .get_transaction_and_data_costs(&simple_transaction)
                 .0
         );
     }
@@ -378,7 +378,7 @@ mod tests {
         testee.upsert_instruction_cost(&system_program::id(), program_cost);
         assert_eq!(
             expected_cost,
-            testee.get_transaction_and_data_bytes_cost(&tx).0
+            testee.get_transaction_and_data_costs(&tx).0
         );
     }
 
@@ -407,7 +407,7 @@ mod tests {
         debug!("many random transaction {:?}", tx);
 
         let testee = CostModel::default();
-        let result = testee.get_transaction_and_data_bytes_cost(&tx).0;
+        let result = testee.get_transaction_and_data_costs(&tx).0;
 
         // expected cost for two random/unknown program is
         let expected_cost = testee.instruction_execution_cost_table.get_default_units() * 2;
